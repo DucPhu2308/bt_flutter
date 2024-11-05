@@ -1,5 +1,10 @@
+import 'dart:convert';
+
 import 'package:bt_flutter/api/auth_api.dart';
+import 'package:bt_flutter/widgets/my_text_field.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -31,35 +36,68 @@ class _LoginScreenState extends State<LoginScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const SizedBox(height: 10),
-            _buildTextField('Email', _emailController),
-            _buildTextField('Password', _passwordController, isPassword: true),
+            MyTextField(label: 'Email', controller: _emailController),
+            MyTextField(
+                label: 'Mật khẩu',
+                controller: _passwordController,
+                isPassword: true),
             ElevatedButton(
               onPressed: () {
-                final user = AuthAPI.login(
+                if (_emailController.text.isEmpty ||
+                    _passwordController.text.isEmpty) {
+                  Fluttertoast.showToast(
+                    msg: 'Vui lòng nhập đầy đủ thông tin',
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
+                  );
+                  return;
+                }
+                AuthAPI.login(
                   _emailController.text,
                   _passwordController.text,
-                );
-                print(user.firstName);
+                ).then((value) async {
+                  if (value['statusCode'] == 401) {
+                    Fluttertoast.showToast(
+                      msg: 'Email hoặc mật khẩu không đúng',
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.red,
+                      textColor: Colors.white,
+                      fontSize: 16.0,
+                    );
+                    return;
+                  }
+                  final String token = value['token'].toString();
+                  final user = value['user'];
+                  final prefs = await SharedPreferences.getInstance();
+                  prefs.setString('token', token);
+                  prefs.setString('user', jsonEncode(user));
+                  Navigator.pushNamed(context, '/home');
+                });
               },
-              child: const Text('Login'),
+              child: const Text('Đăng nhập'),
+            ),
+            // Chưa có tài khoản? Đăng ký ngay
+            TextButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/register');
+              },
+              child: const Text('Chưa có tài khoản? Đăng ký ngay'),
+            ),
+            // Quên mật khẩu
+            TextButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/forgot-password');
+              },
+              child: const Text('Quên mật khẩu?'),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(String label, TextEditingController controller,
-      {bool isPassword = false}) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          border: const OutlineInputBorder(),
-          labelText: label,
-        ),
-        obscureText: isPassword, // Ẩn mật khẩu nếu là trường password
       ),
     );
   }
