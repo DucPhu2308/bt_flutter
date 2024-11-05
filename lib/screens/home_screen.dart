@@ -41,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () {
                 _logout();
               },
-              child: const Text('Logout'),
+              child: const Text('Đăng xuất'),
             ),
           ],
         ),
